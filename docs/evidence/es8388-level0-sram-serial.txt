@@ -1,0 +1,5 @@
+ES8388_I2C_PROBE_START
+ES8388_PRESENT addr=0x10
+
+NuttShell (NSH)
+nsh>
