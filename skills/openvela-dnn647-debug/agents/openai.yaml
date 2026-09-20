@@ -1,0 +1,3 @@
+interface:
+  display_name: "openvela DNN647 Debug"
+  short_description: "Time-boxed DNN647 bring-up and GDB debugging"

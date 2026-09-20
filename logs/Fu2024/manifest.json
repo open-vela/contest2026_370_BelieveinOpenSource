@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "team_id": "contest2026_370_BelieveinOpenSource",
+  "github_login": "Fu2024",
+  "generator": "backfill-codex@codex",
+  "sessions": [
+    {
+      "session_id": "01a0bd6f-4fcb-7343-84ab-b0839ac8d672",
+      "tool": "codex",
+      "started_at": "2026-09-20T06:09:50.151Z",
+      "last_event_at": "2026-09-20T14:59:35.509Z",
+      "event_count": 262,
+      "file_path": "logs/Fu2024/2026-09-20/codex__01a0bd6f-4fcb-7343-84ab-b0839ac8d672.jsonl",
+      "collection_mode": "backfill-sqlite",
+      "health": "ok",
+      "source_integrity": {
+        "main_sha256": "8b0443053249d9a59995f1f46f5c4b058f367902ab55055335f0c7a1a98c56a8",
+        "main_size": 16241018,
+        "captured_at": "2026-09-20T15:01:20.832348+00:00"
+      }
+    }
+  ],
+  "updated_at": "2026-09-20T15:01:20.835312+00:00"
+}

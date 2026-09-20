@@ -69,4 +69,7 @@ SECTIONS
   .debug_line 0 : { *(.debug_line) }
   .debug_pubnames 0 : { *(.debug_pubnames) }
   .debug_aranges 0 : { *(.debug_aranges) }
+
+  /* Keep the SRAM vector table at the configured origin when CMake adds a build-id. */
+  /DISCARD/ : { *(.note.gnu.build-id) }
 }
