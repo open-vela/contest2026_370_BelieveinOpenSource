@@ -1,11 +1,37 @@
 #
-# Contest 2026 team 000 board placeholder
+# STM32N647 DNN647 board configuration
 #
 
-if ARCH_BOARD_CONTEST2026_000_BOARD
+if ARCH_BOARD_CUSTOM
 
-config ARCH_BOARD_CONTEST2026_000_BOARD_TAG
+config ARCH_BOARD_DNN647_TAG
 	string "Board tag"
-	default "contest2026_000_board"
+	default "dnn647"
+
+config DNN647_RX_TEST
+	bool "Temporary standard-input HIL test"
+	default n
+
+config DNN647_BOOT_TRACE
+	bool "Emit DNN647 boot checkpoints on USART1"
+	default n
+	help
+	  Emits three early startup checkpoints after UART setup, early serial
+	  setup, and board initialization.  Keep disabled in production images.
+
+config DNN647_ES8388_PROBE
+	bool "Probe ES8388 over GPIO software I2C"
+	default n
+	help
+	  Probe the ES8388 7-bit address (0x10) on PE13/PE14 during board
+	  late initialization.  This is a Level 0 ACK test only.
+
+config DNN647_USERLEDS
+	bool "Enable DNN647 user LEDs"
+	default n
+	help
+	  Configure LED0 on PG10 and LED1 on PE10 as board-level GPIO outputs.
+	  Both LEDs are active low.  This does not enable NuttX automatic status
+	  LEDs, which require a complete set of architecture status indicators.
 
 endif

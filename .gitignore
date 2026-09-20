@@ -1,0 +1,14 @@
+# Generated NuttX board build files
+board/contest_board/src/.depend
+board/contest_board/src/Make.dep
+board/contest_board/src/Makefile
+board/contest_board/src/*.o
+board/contest_board/src/*.a
+
+# Local build and firmware artifacts
+build/
+out/
+*.elf
+*.bin
+*.hex
+*.map
