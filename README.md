@@ -1,107 +1,116 @@
-# openvela on 正点原子 DNN647
+# 正点原子 DNN647 开发板 openvela 适配
 
-2026 首届 openvela AI 硬件开发者大赛，新硬件适配赛道作品。目标板为正点原子 DNN647，MCU 为 STM32N647X0H3Q。本作品实现了 STM32N6 芯片层与 DNN647 板级构建配置，目标启动链路为：
+本项目面向正点原子 DNN647 开发板（STM32N647），完成 openvela/NuttX 的板级适配，包含 UART/NSH、GPIO 以及 ES8388 音频 Codec 控制接口。
 
-```text
-FSBL -> MX25UM25645G XSPI NOR -> openvela/NuttX XIP image -> USART1 -> CH340 -> PC
-```
+## 已完成适配
 
-当前 MVP 聚焦 NOR 启动、UART/NSH、GPIO 与 ES8388 地址 ACK 基线；屏幕 FPC
-损坏，不作为验收依赖。麦克风 PCM、音量算法和 NPU 音频异常检测不在本提交范围。
+### UART 与 NSH
+
+- 完成 STM32N647 USART1 板级适配；
+- USART1_TX：PE5；
+- USART1_RX：PE6；
+- 支持 UART 控制台输出；
+- 支持进入 NuttShell（NSH）。
+
+### GPIO
+
+- 完成 STM32N6 GPIO 初始化和板级配置；
+- 完成 DNN647 用户 LED 控制；
+- DS1/LED1 连接 PE10，低电平点亮；
+- 提供独立 `nsh_gpio_led` 构建配置。
+
+### ES8388 控制接口
+
+- 完成 ES8388 控制接口的 GPIO 软件 I2C 实现；
+- SCL：PE13；
+- SDA：PE14；
+- ES8388 7 位 I2C 地址：`0x10`；
+- 支持地址 ACK 探测；
+- 探测成功时输出 `ES8388_PRESENT addr=0x10`；
+- 探测完成后继续进入 NSH。
 
 ## 代码结构
 
 ```text
 board/contest_board/
-  configs/nsh/       # 正式 NOR XIP 配置
-  configs/nsh_debug/ # SRAM/GDB 调试配置
-  configs/nsh_es8388/ # ES8388 GPIO software-I2C Level 0 配置
-  configs/nsh_gpio_led/ # GPIO user LED 配置
-  include/           # DNN647 引脚和电源域定义
-  patches/           # STM32N6 NuttX 芯片层补丁
-  scripts/           # 链接脚本和补丁应用脚本
-  src/               # 板级启动和 CMake 集成
-logs/                # AI Coding 日志
+├── configs/
+│   ├── nsh/
+│   ├── nsh_debug/
+│   ├── nsh_es8388/
+│   └── nsh_gpio_led/
+├── include/                  # DNN647 引脚和板级定义
+├── patches/                  # STM32N6 NuttX 芯片层补丁
+├── scripts/                  # 构建和补丁脚本
+├── src/                      # 板级初始化和构建集成
+└── tools/                    # SRAM/GDB 加载工具
 ```
 
-`patches/nuttx-stm32n6.patch` 包含 32 个文件：openvela 当前 NuttX 基线中缺失的 STM32N6 架构目录、Kconfig 接入、RCC/GPIO/UART/中断/启动代码。该补丁只保存在比赛专属仓，不直接提交公共仓。
+`patches/nuttx-stm32n6.patch` 用于接入 STM32N6 架构目录、启动代码、RCC、GPIO、UART、中断及相关 Kconfig 配置。
 
-## 环境与构建
+## 构建配置
 
-以下命令在 repo 工作区根目录执行，专属仓目录为 `contest2026_370_BelieveinOpenSource/`：
+在 openvela 工作区根目录执行：
 
 ```bash
-# 只需在新的同步工作区执行一次
-bash contest2026_370_BelieveinOpenSource/board/contest_board/scripts/apply_nuttx_patch.sh
-
-./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh --cmake -j2
-
-arm-none-eabi-objcopy -I binary \
-  cmake_out/contest2026_370_board_nsh/nuttx.bin \
-  --change-addresses=0x70100400 -O ihex \
-  openvela-dnn647-nsh-xip.hex
+./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh_debug --cmake -j2
+./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh_es8388 --cmake -j2
+./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh_gpio_led --cmake -j2
 ```
 
-本次验证使用 Ubuntu 22.04 WSL2、openvela 工作区自带的 GNU Arm Embedded Toolchain。正式构建成功标志为：
+构建完成标志：
 
 ```text
 #### build completed successfully
 ```
 
-## 烧录
-
-板卡使用正点原子资料包提供的 FSBL 与 MX25UM25645G 外部加载器。FSBL 首次写入 `0x70000000`；应用镜像写入 `0x70100400`。应用更新不应覆盖 FSBL。
-
-Windows PowerShell 示例：
-
-```powershell
-$cli = 'D:\embeddedTool\STM32Dev\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe'
-$loader = 'D:\...\MX25UM25645G_ATK-CNN647B_ExtMemLoader.stldr'
-& $cli -c port=SWD mode=HOTPLUG -el $loader -w .\openvela-dnn647-nsh-xip.hex -v
-```
-
-BOOT 跳线（以正点原子资料和本板实测为准）：
-
-| 用途 | BOOT0 | BOOT1 |
-| --- | --- | --- |
-| Flash boot，外部 NOR 正式启动 | GND | GND |
-| Development boot，ST-LINK 烧录和 GDB 调试 | GND | 3.3V |
-
-串口：`USART1_TX=PE5`、`USART1_RX=PE6`，经 P12 跳线连接 CH340；PC 侧参数为 `COM4, 115200, 8N1`。
-
-## 验证记录（2026-09-20）
-
-| 项目 | 结果 | 证据 |
-| --- | --- | --- |
-| STM32N6/DNN647 正式 XIP 配置编译 | 通过 | `build completed successfully` |
-| NOR 地址 `0x70100400` 烧录与读回校验 | 通过 | CubeProgrammer: `Download verified successfully` |
-| FSBL -> NOR -> 早期代码 -> USART1 TX | 通过 | Flash boot 下连续收到 `DNN647 EARLY UART TX PROBE` |
-| SRAM/GDB 下 openvela NSH | 通过 | 收到 `NuttShell (NSH)` 和 `nsh>` |
-| NOR Flash boot 下 openvela/NSH | 通过 | 完整上电后观察到启动文本和 `nsh>` |
-| USART1 RX/NSH 命令输入 | 通过 | 已执行 `help`、`uname` 等 NSH 命令 |
-| GPIO user LED | 通过 | DS1 = PE10/LED1，低电平点亮 |
-| ES8388 GPIO software-I2C address ACK | 通过 | `ES8388_PRESENT addr=0x10` 后继续到 `nsh>` |
-
-因此本提交包含可复现的芯片层、板级配置、正式 XIP 启动、UART/NSH、GPIO
-输出和 ES8388 地址 ACK 基线。详细 HIL 记录和边界见
-[`docs/VALIDATION.md`](docs/VALIDATION.md)。
-
-## 已知问题与下一步
-
-下一步是 ES8388 codec 寄存器读写，随后再评估 SAI、GPDMA、PCM 采集和
-麦克风音量检测。RGB 使用 WS2812B 严格时序，保持在本次最小 BSP 提交之外。
-
-## AI Coding Record
-
-AI assistance was used for BSP scope analysis, NuttX board integration,
-hardware-reference cross-checking, build verification, ST-LINK/GDB diagnosis,
-and reproducibility documentation. Real AI Coding session logs are submitted
-under `logs/` separately; generated firmware artifacts and local debug logs
-are intentionally not committed.
-
 ## 官方资料
 
-- [大赛总览](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)
-- [新硬件适配赛道指南](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_track_guide.md)
+- [硬件适配赛道指南](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_track_guide.md)
 - [代码提交指南](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)
 - [AI Coding 日志手册](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)
+
+## 两套演示配置的复现命令
+
+下面两套流程可以分别独立执行。Windows PowerShell 中每套流程都重新定义路径变量，不依赖上一套流程。
+
+### ES8388 地址 ACK 与 NSH
+
+先在 WSL 终端构建：
+
+```bash
+cd /home/dev/openvela-workspace
+./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh_es8388 --cmake -j2
+```
+
+再打开一个 Windows PowerShell，执行以下完整命令：
+
+```powershell
+Push-Location '\\wsl.localhost\Ubuntu-22.04\home\dev\openvela-workspace'
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+$tool = '.\contest2026_370_BelieveinOpenSource\board\contest_board\tools\run_sram_image.ps1'
+$elf = '.\cmake_out\contest2026_370_board_nsh_es8388\nuttx'
+& $tool -ElfPath $elf
+```
+
+串口助手要先打开 COM4，参数为 `115200, 8N1`；BOOT0 置 GND、BOOT1 置 3.3V。预期看到 `ES8388_PRESENT addr=0x10`，随后出现 `nsh>`。
+
+### GPIO 用户 LED
+
+先在 WSL 终端构建：
+
+```bash
+cd /home/dev/openvela-workspace
+./build.sh vendor/openvela/boards/contest2026_370_board/configs/nsh_gpio_led --cmake -j2
+```
+
+如果当前有其他 GDB 会话，在对应 GDB 窗口按 `Ctrl+C`，再输入 `quit`。然后打开一个新的 Windows PowerShell，执行以下完整命令：
+
+```powershell
+Push-Location '\\wsl.localhost\Ubuntu-22.04\home\dev\openvela-workspace'
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+$tool = '.\contest2026_370_BelieveinOpenSource\board\contest_board\tools\run_sram_image.ps1'
+$elf = '.\cmake_out\contest2026_370_board_nsh_gpio_led\nuttx'
+& $tool -ElfPath $elf
+```
+
+BOOT0 置 GND、BOOT1 置 3.3V，COM4 保持 `115200, 8N1`。预期 DS1（PE10/LED1，低电平有效）点亮，并在串口进入 `nsh>`。该配置证明板级 GPIO 输出，不等同于完整 NuttX LED 上半部驱动。

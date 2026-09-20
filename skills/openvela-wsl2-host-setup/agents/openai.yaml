@@ -1,0 +1,3 @@
+interface:
+  display_name: "openvela WSL2 Host Setup"
+  short_description: "WSL2 host setup and VirtualBox coexistence"
